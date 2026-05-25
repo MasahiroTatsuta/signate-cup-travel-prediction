@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.env
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Large intermediate data files
+data/train_*.csv
+data/test_*.csv
+data/processed_*.csv
+data/*_filled*.csv
+data/*_learn*.csv
+data/*_lightgbm*.csv
+
+# Multiple submission versions (keep only final)
+outputs/submission_*.csv
+!outputs/submission_final.csv
+outputs/debug_*.csv
+outputs/*.zip
+outputs/*.xlsx
+
+# Model binaries
+outputs/*.pkl
+
+# OS
+.DS_Store
+Thumbs.db
+
