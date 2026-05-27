@@ -1,107 +1,142 @@
-# ✈️ Travel Package Purchase Prediction — SIGNATE Cup (SOTA Challenge)
+# ✈️ Travel Package Purchase Prediction — SIGNATE Cup（SOTA Challenge）
 
-> **Binary classification** to predict whether a customer will purchase a travel package,
-> using advanced feature engineering (AutoFeat + UMAP density embeddings) and LightGBM.
+> **旅行パッケージを顧客が購入するかどうかを予測する二値分類タスク**  
+> 高度な特徴量エンジニアリング（AutoFeat + UMAP密度埋め込み）と LightGBM を用いて構築。
 
-> **Note:** This repository documents the experimentation process.
-> Scores cited reflect the best submission during the competition period;
-> exact reproducibility may vary due to environment and seed differences.
+> **注記:**  
+> このリポジトリは実験プロセスを記録したものです。  
+> 記載されているスコアはコンペ期間中のベスト提出結果であり、環境や乱数シードの違いにより完全再現できない場合があります。
 
 ---
 
-## Competition Info
+# コンペ概要
 
-| Item | Detail |
+| 項目 | 内容 |
 |---|---|
-| Platform | [SIGNATE Cup – SOTA Challenge](https://signate.jp/) |
-| Task | Binary classification (ProdTaken: purchased / not purchased) |
-| Metric | AUC-ROC |
+| プラットフォーム | SIGNATE Cup – SOTA Challenge |
+| タスク | 二値分類（ProdTaken: 購入 / 非購入） |
+| 評価指標 | AUC-ROC |
 
 ---
 
-## Technical Highlights
+# 技術的ハイライト
 
-### Problem Overview
-Predict travel product purchase from customer demographic and sales interaction data.  
-Key challenges: mixed categorical/numeric features, missing values, and moderate class imbalance.
+## 問題概要
 
-### Solution Pipeline
+顧客属性データおよび営業接触データを用いて、旅行商品の購入有無を予測します。  
 
-```
+主な課題:
+
+- カテゴリ変数と数値変数が混在
+- 欠損値の存在
+- 中程度のクラス不均衡
+
+---
+
+## ソリューションパイプライン
+
+```text
 Raw Data
    ↓
 [Preprocessing]  ── notebooks/01_preprocessing.ipynb
-   ├── Categorical cleaning (unicode normalization, typo correction)
-   ├── KNN imputation for numeric features
-   └── Label encoding + OneHotEncoding for categoricals
+   ├── カテゴリデータのクリーニング（Unicode正規化・誤字修正）
+   ├── 数値特徴量へのKNN補完
+   └── Label Encoding + OneHotEncoding
    ↓
 [Feature Engineering]  ── notebooks/03_feature_engineering_and_training.ipynb
-   ├── AutoFeat polynomial cross-features
-   ├── Correlation-based selection (target corr > 0.01, inter-feature < 0.9)
-   └── UMAP density embeddings (n_neighbors = 15/20/25/30)  ── notebooks/02_umap.ipynb
+   ├── AutoFeat による多項式交差特徴量生成
+   ├── 相関ベース特徴量選択
+   │      ├── 目的変数との相関 > 0.01
+   │      └── 特徴量間相関 < 0.9
+   └── UMAP 密度埋め込み
+          (n_neighbors = 15 / 20 / 25 / 30)
+          ── notebooks/02_umap.ipynb
    ↓
 [Modeling]
-   ├── LightGBM + Optuna (5-fold KFold, AUC objective)
-   └── CatBoost (comparison)
+   ├── LightGBM + Optuna
+   │      └── 5-fold KFold / AUC最適化
+   └── CatBoost（比較用）
    ↓
 [Threshold Optimization]
-   └── Best decision threshold search on validation AUC
+   └── 検証AUC上で最適な閾値を探索
 ```
 
-### Key Experiments
+---
 
-| Method | CV AUC |
+## 主な実験結果
+
+| 手法 | CV AUC |
 |---|---|
-| LightGBM baseline | 0.698 |
-| + AutoFeat features | 0.721 |
-| + UMAP density embeddings | 0.736 |
-| + Optuna tuning | 0.743 |
+| LightGBM ベースライン | 0.698 |
+| + AutoFeat 特徴量 | 0.721 |
+| + UMAP 密度埋め込み | 0.736 |
+| + Optuna チューニング | 0.743 |
 
-### Notable: UMAP Density Embeddings
+---
 
-Rather than using UMAP purely for visualization, this project incorporated UMAP-derived **density map coordinates** as additional numeric features — providing the model with a learned low-dimensional manifold structure of the input space.
+## 注目ポイント: UMAP Density Embeddings
+
+UMAP を単なる可視化用途として使うのではなく、  
+UMAP から得られる **密度マップ座標** を追加の数値特徴量として利用しました。
+
+これにより、入力空間における低次元多様体構造（manifold structure）をモデルへ学習させることができました。
 
 ```python
-# n_neighbors swept: 15, 20, 25, 30
-# densMAP=True to capture local density in embedding
+# n_neighbors を 15, 20, 25, 30 で探索
+# densMAP=True により局所密度情報を保持
 reducer = umap.UMAP(n_neighbors=n, densmap=True, random_state=42)
 embedding = reducer.fit_transform(X_scaled)
 ```
 
 ---
 
-## Repository Structure
+# リポジトリ構成
 
-```
+```text
 signate-cup-travel-prediction/
 ├── notebooks/
-│   ├── 01_preprocessing.ipynb                    ← Data cleaning & encoding
-│   ├── 02_umap.ipynb                             ← UMAP density embedding generation
-│   ├── 03_feature_engineering_and_training.ipynb ← AutoFeat + LightGBM + Optuna
-│   └── 04_training_simple.ipynb                  ← Simple LightGBM baseline
+│   ├── 01_preprocessing.ipynb
+│   │      ← データクリーニング & エンコーディング
+│   ├── 02_umap.ipynb
+│   │      ← UMAP 密度埋め込み生成
+│   ├── 03_feature_engineering_and_training.ipynb
+│   │      ← AutoFeat + LightGBM + Optuna
+│   └── 04_training_simple.ipynb
+│          ← シンプルな LightGBM ベースライン
+│
 ├── data/
-│   ├── train.csv          ← raw training data (from SIGNATE)
-│   ├── test.csv           ← raw test data
-│   └── sample_submit.csv  ← submission format
+│   ├── train.csv
+│   │      ← 学習データ（SIGNATE提供）
+│   ├── test.csv
+│   │      ← テストデータ
+│   └── sample_submit.csv
+│          ← 提出フォーマット
+│
 ├── outputs/
-│   ├── submission_final.csv   ← final submission
-│   ├── feature_importance.csv ← LightGBM feature importance
-│   └── eda_*.png              ← EDA visualizations (target rate by feature)
+│   ├── submission_final.csv
+│   │      ← 最終提出ファイル
+│   ├── feature_importance.csv
+│   │      ← LightGBM 特徴量重要度
+│   └── eda_*.png
+│          ← EDA可視化（特徴量ごとの目的変数比率）
+│
 ├── requirements.txt
 └── .gitignore
 ```
 
 ---
 
-## Quickstart
+# クイックスタート
 
 ```bash
 git clone https://github.com/MasahiroTatsuta/signate-cup-travel-prediction
 cd signate-cup-travel-prediction
+
 pip install -r requirements.txt
 
-# Place competition data in data/ (download from SIGNATE)
-# Run notebooks in order:
+# SIGNATEから取得したデータを data/ に配置
+
+# Notebook を順番に実行
 jupyter notebook notebooks/01_preprocessing.ipynb
 jupyter notebook notebooks/02_umap.ipynb
 jupyter notebook notebooks/03_feature_engineering_and_training.ipynb
@@ -109,9 +144,9 @@ jupyter notebook notebooks/03_feature_engineering_and_training.ipynb
 
 ---
 
-## Environment
+# 実行環境
 
-| Library | Version |
+| ライブラリ | バージョン |
 |---|---|
 | Python | 3.10+ |
 | LightGBM | ≥ 4.0 |
@@ -120,12 +155,16 @@ jupyter notebook notebooks/03_feature_engineering_and_training.ipynb
 | umap-learn | ≥ 0.5 |
 | autofeat | ≥ 2.1 |
 
-See [`requirements.txt`](requirements.txt) for the full list.
+完全な一覧は `requirements.txt` を参照してください。
 
 ---
 
-## What I Learned
+# 学んだこと
 
-- **UMAP density embeddings** as additional features improved AUC by ~0.015 over standard feature engineering alone — manifold structure captured meaningful customer segmentation that tabular features alone couldn't express
-- Sweeping `n_neighbors` (15→30) showed n=20 optimal for this dataset; larger values over-smoothed local structure
-- `AutoFeat` with `feateng_steps=2` generated useful interaction terms (e.g. `Age × NumberOfTrips`) that had high correlation with the target
+- **UMAP density embeddings** を追加特徴量として利用することで、通常の特徴量エンジニアリング単体と比較して AUC が約 `+0.015` 向上した  
+  → 多様体構造が、通常の表形式特徴量だけでは表現できない顧客セグメント情報を捉えていた
+
+- `n_neighbors` を 15 → 30 で探索した結果、このデータセットでは `n=20` が最適だった  
+  → 大きすぎる値では局所構造が過度に平滑化された
+
+- `AutoFeat` の `feateng_steps=2` により、有用な交互作用特徴量（例: `Age × NumberOfTrips`）が生成され、目的変数との高い相関を示した
